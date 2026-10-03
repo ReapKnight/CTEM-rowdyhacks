@@ -1,4 +1,7 @@
-"""Small explicit fixture; replace with reviewed Trivy/EPSS/KEV inputs in the next phase."""
+﻿"""Small explicit fixture; replace with reviewed Trivy/EPSS/KEV inputs in the next phase."""
+
+import json
+from pathlib import Path
 
 from copy import deepcopy
 
@@ -42,9 +45,20 @@ FIXTURES = [
 def findings_with_validation(results: dict[str, dict]) -> list[dict]:
     findings = deepcopy(FIXTURES)
     for finding in findings:
+        if finding["id"] == "lab-httpd-41773":
+            snapshot_path = Path(__file__).with_name("intel_snapshot.json")
+            if snapshot_path.is_file():
+                intel = json.loads(snapshot_path.read_text(encoding="utf-8-sig"))
+                if intel.get("cve_id") != finding["cve_id"]:
+                    raise RuntimeError("Intelligence snapshot CVE mismatch")
+                keys = ("epss_probability", "epss_percentile", "epss_date",
+                        "kev", "kev_retrieved_at", "provenance",
+                        "epss_source", "kev_source", "kev_date_added")
+                finding["threat"].update({key: intel[key] for key in keys})
         finding["priority"] = priority_for(finding)
         finding["validation"] = deepcopy(results.get(finding["id"], {
             "status": "not_run", "provenance": "mock", "observed_at": None,
             "template_id": None, "viewpoint": None, "summary": "Validation has not run.",
             "evidence": [], "limitations": []}))
     return findings
+
