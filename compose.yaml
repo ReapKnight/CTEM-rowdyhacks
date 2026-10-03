@@ -1,0 +1,15 @@
+﻿services:
+  vulnerable-web:
+    build:
+      context: ./lab/target
+    image: rowdyhacks/ctem-vulnerable-httpd:2.4.49
+    ports:
+      - "127.0.0.1:8080:80"
+    networks:
+      lab:
+        aliases:
+          - vulnerable-web.ctem.local
+
+networks:
+  lab:
+    driver: bridge
