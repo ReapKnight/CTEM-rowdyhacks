@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { ApiRemediation } from "./lib/types";
 import { API_BASE, ApiError, USE_MOCKS_DEFAULT, fetchFindings, requestRemediation, validateFinding } from "./lib/api";
-import { Finding, fileReadConfirmed, fmtScore, rankByCtem, rankByCvss, toUiFinding } from "./findings";
+import { Finding, fmtScore, rankByCtem, rankByCvss, toUiFinding, validationConfirmed } from "./findings";
 import Reactor, { CATEGORY_COLORS } from "./components/Reactor";
 import RankShift from "./components/RankShift";
 import Queue from "./components/Queue";
@@ -221,7 +221,8 @@ export default function Home() {
   );
 
   useEffect(() => {
-    load(mock);
+    const timer = window.setTimeout(() => void load(mock), 0);
+    return () => window.clearTimeout(timer);
   }, [mock, load]);
 
   // ── Actions ──
@@ -236,9 +237,9 @@ export default function Home() {
     try {
       const v = await validateFinding(f.id, mock);
       setFindings((list) => list && list.map((x) => (x.id === f.id ? { ...x, validation: v } : x)));
-      if (fileReadConfirmed(v)) {
-        const marker = v.evidence.find((e) => e.label === "Controlled marker")?.detail ?? "";
-        addLog("ok", `VALIDATION MATCHED · ${f.id} · marker ${marker}${v.provenance === "mock" ? " · MOCK" : ""}`, v.observed_at ?? undefined);
+      if (validationConfirmed(v)) {
+        const proof = v.evidence.find((e) => e.label === "Controlled marker" || e.label === "Computed response header");
+        addLog("ok", `VALIDATION MATCHED · ${f.id} · ${proof ? `${proof.label.toLowerCase()} ${proof.detail}` : ""}${v.provenance === "mock" ? " · MOCK" : ""}`, v.observed_at ?? undefined);
       } else {
         addLog("warn", `VALIDATION INCONCLUSIVE · ${f.id} · ${v.summary}`, v.observed_at ?? undefined);
       }
@@ -316,7 +317,10 @@ export default function Home() {
       if (top) setSelectedId(top.id);
       flashLater(() => reactorRef.current);
     } else if (key === "validate") {
-      const target = findings.find((f) => f.validationSupported);
+      // Keep the finding you're viewing if it has a check; otherwise the top CTEM finding that does
+      const current = findings.find((f) => f.id === selectedId);
+      const target =
+        current && current.validationSupported ? current : rankByCtem(findings).find((f) => f.validationSupported);
       if (target) setSelectedId(target.id);
       flashLater(() => valBtnRef.current ?? valRef.current, "button");
     } else if (key === "mobilize") {
@@ -459,7 +463,7 @@ export default function Home() {
             <span className="hud text-xs" style={{ color: "var(--ink3)" }}>{selected.modelVersion}</span>
           </div>
           <div ref={reactorVizRef}>
-          <Reactor key={selected.id} finding={selected} validating={validatingId === selected.id} confirmed={fileReadConfirmed(selected.validation)} />
+          <Reactor key={selected.id} finding={selected} validating={validatingId === selected.id} confirmed={validationConfirmed(selected.validation)} />
           </div>
           {selected.priority !== null && (
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[12px]" style={{ color: "var(--ink2)" }}>

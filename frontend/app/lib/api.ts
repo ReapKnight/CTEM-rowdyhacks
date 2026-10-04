@@ -58,7 +58,7 @@ export async function fetchFindings(mock: boolean): Promise<ApiFindingsResponse>
 export async function validateFinding(id: string, mock: boolean): Promise<ApiValidation> {
   if (mock) {
     await wait(1500);
-    return mockValidation();
+    return mockValidation(id);
   }
   return request<ApiValidation>(`/api/findings/${encodeURIComponent(id)}/validate`, "POST");
 }

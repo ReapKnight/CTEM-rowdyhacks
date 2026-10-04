@@ -1,6 +1,6 @@
 "use client";
 import { useLayoutEffect, useRef } from "react";
-import { Finding, fileReadConfirmed, fmtScore, missingName } from "../findings";
+import { Finding, expressionConfirmed, fileReadConfirmed, fmtScore, missingName } from "../findings";
 
 // Ranked list. When the order changes, rows slide from their old spot
 // to their new one (FLIP technique, no extra libraries).
@@ -68,14 +68,14 @@ export default function Queue({
               <span className="block text-[11px] mt-0.5" style={{ color: "var(--ink3)" }}>
                 {f.asset.name} · {f.asset.environment.toLowerCase()}
                 <span
-                  className="ml-1.5 px-1.5 rounded text-[10px] border"
+                  className="ml-1.5 px-1.5 rounded text-[10px] border whitespace-nowrap inline-block"
                   style={f.isSynthetic ? { color: "var(--warn)", borderColor: "#6b4a10" } : { color: "var(--cyan)", borderColor: "#1d5870" }}
                 >
                   {f.sourceLabel.toUpperCase()}
                 </span>
-                {fileReadConfirmed(f.validation) && (
-                  <span className="ml-1.5 px-1.5 rounded text-[10px] border" style={{ color: "var(--ok)", borderColor: "#1f6b52" }}>
-                    ✓ FILE READ
+                {(fileReadConfirmed(f.validation) || expressionConfirmed(f.validation)) && (
+                  <span className="ml-1.5 px-1.5 rounded text-[10px] border whitespace-nowrap inline-block" style={{ color: "var(--ok)", borderColor: "#1f6b52" }}>
+                    {fileReadConfirmed(f.validation) ? "✓ FILE READ" : "✓ EXPRESSION"}
                   </span>
                 )}
               </span>

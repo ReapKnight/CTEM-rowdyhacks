@@ -1,9 +1,5 @@
-// ─────────────────────────────────────────────────────────────
-// MOCK MODE ONLY. A copy of what the backend returns, so the same
-// adapter runs in mock and live mode. Generated from the backend's own
-// fixture (backend/app/data.py + scoring.py) — do not hand-edit scores.
-// Everything here is labeled MOCK in the UI.
-// ─────────────────────────────────────────────────────────────
+// MOCK MODE ONLY. Generated from the backend fixture and snapshot.
+// Values are a labeled offline replay; no live retrieval or validation occurs.
 import type { ApiFindingsResponse, ApiRemediation, ApiValidation } from "./types";
 
 export const mockFindings: ApiFindingsResponse = {
@@ -26,18 +22,15 @@ export const mockFindings: ApiFindingsResponse = {
       "cvss": {
         "score": 7.5,
         "version": "3.1",
-        "source": "CVE reference; verify before demo"
+        "source": "CISA-ADP CVE record"
       },
       "threat": {
         "epss_probability": 0.99992,
         "epss_percentile": 0.99986,
         "kev": true,
-        "epss_date": "2026-10-03",
-        "kev_retrieved_at": "2026-10-03T23:51:40.3966192Z",
-        "provenance": "verified_cached",
-        "epss_source": "https://api.first.org/data/v1/epss?cve=CVE-2021-41773",
-        "kev_source": "https://github.com/cisagov/kev-data",
-        "kev_date_added": "2021-11-03"
+        "epss_date": null,
+        "kev_retrieved_at": null,
+        "provenance": "mock"
       },
       "validation_supported": true,
       "priority": {
@@ -52,7 +45,7 @@ export const mockFindings: ApiFindingsResponse = {
               {
                 "label": "EPSS probability",
                 "points": 20.0,
-                "explanation": "20 \u00d7 EPSS probability; EPSS is not asset compromise probability."
+                "explanation": "20 × EPSS probability; EPSS is not asset compromise probability."
               },
               {
                 "label": "CISA KEV",
@@ -103,7 +96,7 @@ export const mockFindings: ApiFindingsResponse = {
               {
                 "label": "CVSS base score",
                 "points": 15.0,
-                "explanation": "2 \u00d7 supplied CVSS base score."
+                "explanation": "2 × supplied CVSS base score."
               }
             ]
           }
@@ -122,13 +115,13 @@ export const mockFindings: ApiFindingsResponse = {
       }
     },
     {
-      "id": "demo-dev-a",
-      "cve_id": null,
-      "title": "Synthetic comparison finding A",
-      "discovery_source": "synthetic_demo",
+      "id": "lab-httpd-42013",
+      "cve_id": "CVE-2021-42013",
+      "title": "Apache HTTP Server 2.4.50 path traversal (controlled lab)",
+      "discovery_source": "prepared_lab",
       "asset": {
-        "id": "demo-dev",
-        "name": "DEV-ISOLATED-01",
+        "id": "lab-dev",
+        "name": "HTTPD-DEV-01",
         "environment": "development",
         "business_service": "Demonstration service",
         "criticality": "low",
@@ -138,35 +131,35 @@ export const mockFindings: ApiFindingsResponse = {
       },
       "cvss": {
         "score": 9.8,
-        "version": "demo",
-        "source": "synthetic_demo"
+        "version": "3.1",
+        "source": "NVD CVE-2021-42013"
       },
       "threat": {
-        "epss_probability": 0.01,
-        "epss_percentile": null,
-        "kev": false,
+        "epss_probability": 0.99964,
+        "epss_percentile": 0.99976,
+        "kev": true,
         "epss_date": null,
         "kev_retrieved_at": null,
-        "provenance": "synthetic_demo"
+        "provenance": "mock"
       },
-      "validation_supported": false,
+      "validation_supported": true,
       "priority": {
-        "score": 28.8,
+        "score": 58.6,
         "model_version": "ctem-demo-v0.1",
         "categories": [
           {
             "key": "threat",
             "max_points": 30,
-            "points": 0.2,
+            "points": 30.0,
             "factors": [
               {
                 "label": "EPSS probability",
-                "points": 0.2,
-                "explanation": "20 \u00d7 EPSS probability; EPSS is not asset compromise probability."
+                "points": 20.0,
+                "explanation": "20 × EPSS probability; EPSS is not asset compromise probability."
               },
               {
                 "label": "CISA KEV",
-                "points": 0.0,
+                "points": 10.0,
                 "explanation": "10 points if listed in the retrieved KEV catalog."
               }
             ]
@@ -213,7 +206,7 @@ export const mockFindings: ApiFindingsResponse = {
               {
                 "label": "CVSS base score",
                 "points": 19.6,
-                "explanation": "2 \u00d7 supplied CVSS base score."
+                "explanation": "2 × supplied CVSS base score."
               }
             ]
           }
@@ -232,47 +225,47 @@ export const mockFindings: ApiFindingsResponse = {
       }
     },
     {
-      "id": "demo-prod-b",
-      "cve_id": null,
-      "title": "Synthetic comparison finding B",
-      "discovery_source": "synthetic_demo",
+      "id": "lab-struts-5638",
+      "cve_id": "CVE-2017-5638",
+      "title": "Apache Struts 2.3.30 Jakarta Multipart parser (controlled lab)",
+      "discovery_source": "prepared_lab",
       "asset": {
-        "id": "demo-prod",
-        "name": "WEB-PROD-01",
+        "id": "lab-struts",
+        "name": "STRUTS-PROD-01",
         "environment": "production",
         "business_service": "Demonstration service",
         "criticality": "critical",
-        "internet_facing": true,
+        "internet_facing": false,
         "data_sensitivity": "high",
         "context_source": "predefined_demo"
       },
       "cvss": {
-        "score": 8.1,
-        "version": "demo",
-        "source": "synthetic_demo"
+        "score": 9.8,
+        "version": "3.1",
+        "source": "NVD CVE-2017-5638"
       },
       "threat": {
-        "epss_probability": 0.8,
-        "epss_percentile": null,
+        "epss_probability": 0.99999,
+        "epss_percentile": 0.99994,
         "kev": true,
         "epss_date": null,
         "kev_retrieved_at": null,
-        "provenance": "synthetic_demo"
+        "provenance": "mock"
       },
-      "validation_supported": false,
+      "validation_supported": true,
       "priority": {
-        "score": 92.2,
+        "score": 79.6,
         "model_version": "ctem-demo-v0.1",
         "categories": [
           {
             "key": "threat",
             "max_points": 30,
-            "points": 26.0,
+            "points": 30.0,
             "factors": [
               {
                 "label": "EPSS probability",
-                "points": 16.0,
-                "explanation": "20 \u00d7 EPSS probability; EPSS is not asset compromise probability."
+                "points": 20.0,
+                "explanation": "20 × EPSS probability; EPSS is not asset compromise probability."
               },
               {
                 "label": "CISA KEV",
@@ -284,11 +277,11 @@ export const mockFindings: ApiFindingsResponse = {
           {
             "key": "exposure",
             "max_points": 25,
-            "points": 25.0,
+            "points": 5.0,
             "factors": [
               {
                 "label": "Predefined internet exposure",
-                "points": 25.0,
+                "points": 5.0,
                 "explanation": "Asset context supplied for the demo; the lab check does not establish internet exposure."
               }
             ]
@@ -318,12 +311,12 @@ export const mockFindings: ApiFindingsResponse = {
           {
             "key": "technical_severity",
             "max_points": 20,
-            "points": 16.2,
+            "points": 19.6,
             "factors": [
               {
                 "label": "CVSS base score",
-                "points": 16.2,
-                "explanation": "2 \u00d7 supplied CVSS base score."
+                "points": 19.6,
+                "explanation": "2 × supplied CVSS base score."
               }
             ]
           }
@@ -342,22 +335,28 @@ export const mockFindings: ApiFindingsResponse = {
       }
     }
   ],
-  "generated_at": "2026-10-04T00:00:00+00:00"
+  "generated_at": "mock"
 };
 
-export function mockValidation(): ApiValidation {
+
+export function mockValidation(findingId: string): ApiValidation {
+  const checks: Record<string, { template: string; kind: "file_read" | "expression_evaluation"; label: string; proof: string }> = {
+    "lab-httpd-41773": { template: "ctem-cve-2021-41773-readonly", kind: "file_read", label: "Controlled marker", proof: "CTEM-LAB-PROOF-41773" },
+    "lab-httpd-42013": { template: "ctem-cve-2021-42013-readonly", kind: "file_read", label: "Controlled marker", proof: "CTEM-LAB-PROOF-42013" },
+    "lab-struts-5638": { template: "ctem-cve-2017-5638-expression", kind: "expression_evaluation", label: "Computed response header", proof: "5421" },
+  };
+  const check = checks[findingId];
+  if (!check) throw new Error("No mock check for this finding");
   return {
     status: "matched",
-    summary: "MOCK: Approved check read the controlled marker file outside the web root.",
-    evidence: [
-      { label: "HTTP response", detail: "200 OK" },
-      { label: "Controlled marker", detail: "CTEM-LAB-PROOF-41773" },
-    ],
+    summary: "MOCK: Offline replay of an approved lab result.",
+    evidence: [{ label: "HTTP response", detail: "200 OK" }, { label: check.label, detail: check.proof }],
     provenance: "mock",
     observed_at: new Date().toISOString(),
-    template_id: "ctem-cve-2021-41773-readonly",
-    viewpoint: "local Docker lab",
-    limitations: ["This check establishes controlled file read only; it does not prove RCE or internet exposure."],
+    template_id: check.template,
+    kind: check.kind,
+    viewpoint: "mock local Docker lab",
+    limitations: ["Offline replay only; no check was executed."],
   };
 }
 

@@ -1,3 +1,4 @@
+from .remediation import generate_remediation
 import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
@@ -47,19 +48,19 @@ async def validate(finding_id: str):
             "code": "VALIDATION_RUNNING", "message": "Validation already running", "retryable": True}})
     async with validation_lock:
         try:
-            result = with_metadata(await run_validation(REPO_ROOT))
+            result = with_metadata(await run_validation(REPO_ROOT, finding_id), finding_id)
         except (OSError, RuntimeError) as exc:
-            result = with_metadata({"status": "error", "summary": str(exc), "evidence": []})
+            result = with_metadata({"status": "error", "summary": str(exc), "evidence": []}, finding_id)
         validation_results[finding_id] = result
         return result
 
-
 @app.post("/api/findings/{finding_id}/remediation")
 def remediation(finding_id: str):
-    if not any(f["id"] == finding_id for f in FIXTURES):
+    selected = next(
+        (f for f in findings_with_validation(validation_results)
+         if f["id"] == finding_id),
+        None,
+    )
+    if selected is None:
         raise HTTPException(404, detail="Finding not found")
-    return {"finding_id": finding_id, "status": "manual_review_required",
-            "provenance": "mock", "generated_at": None,
-            "sections": {key: [] for key in ("remediation", "mitigation", "implementation",
-                                             "verification", "rollback", "reasoning")},
-            "sources": [], "limitations": ["AI grounding is not configured. No recommendation was generated."]}
+    return generate_remediation(selected)

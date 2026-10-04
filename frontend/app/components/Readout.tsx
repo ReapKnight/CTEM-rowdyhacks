@@ -1,7 +1,7 @@
 "use client";
 import type { ReactNode, RefObject } from "react";
 import type { ApiRemediation } from "../lib/types";
-import { Finding, epssText, fileReadConfirmed, fmtScore, kevText } from "../findings";
+import { Finding, epssText, expressionConfirmed, fileReadConfirmed, fmtScore, kevText } from "../findings";
 
 function Tag({ kind, children }: { kind: "declared" | "demo" | "verified"; children: ReactNode }) {
   const s =
@@ -28,6 +28,25 @@ function Row({ k, children }: { k: string; children: ReactNode }) {
 
 const asText = (x: unknown): string =>
   typeof x === "string" ? x : x && typeof x === "object" && "label" in x ? String((x as { label: unknown }).label) : JSON.stringify(x);
+
+// Sources may be {label, url}: show a link only for http(s) URLs
+function sourceLink(x: unknown): ReactNode {
+  if (x && typeof x === "object" && "url" in x && typeof (x as { url: unknown }).url === "string") {
+    try {
+      const url = new URL((x as { url: string }).url);
+      if (url.protocol === "https:" || url.protocol === "http:") {
+        return (
+          <a href={url.href} target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "var(--cyan)" }}>
+            {asText(x)}
+          </a>
+        );
+      }
+    } catch {
+      /* not a valid URL */
+    }
+  }
+  return asText(x);
+}
 
 type Props = {
   finding: Finding;
@@ -60,16 +79,18 @@ export default function Readout({
   remBtnRef,
 }: Props) {
   const v = f.validation;
-  const confirmed = fileReadConfirmed(v);
+  const fileRead = fileReadConfirmed(v);
+  const expression = expressionConfirmed(v);
+  const confirmed = fileRead || expression;
   const hasRun = v.status !== "not_run";
 
   let title = "NOT RUN YET";
   let tone = { color: "var(--ink2)", border: "var(--line2)", bg: "#0a121a" };
   if (confirmed) {
-    title = "✓ FILE READ CONFIRMED";
+    title = fileRead ? "✓ FILE READ CONFIRMED" : "✓ EXPRESSION EVALUATION CONFIRMED";
     tone = { color: "var(--ok)", border: "#1f6b52", bg: "#0b241c" };
   } else if (v.status === "matched") {
-    title = "INCONCLUSIVE · MATCH WITHOUT MARKER EVIDENCE";
+    title = "INCONCLUSIVE · MATCH WITHOUT THE EXPECTED EVIDENCE";
     tone = { color: "var(--warn)", border: "#6b4a10", bg: "#2a1d0644" };
   } else if (hasRun) {
     title = "INCONCLUSIVE";
@@ -156,8 +177,8 @@ export default function Readout({
               )}
             </div>
             <p className="text-[11px] mt-2" style={{ color: "var(--ink3)" }}>
-              One approved, read-only check against the controlled local Docker lab. Does not prove internet exposure or
-              RCE, and does not change the priority score.
+              One approved check against the controlled local Docker lab. It does not prove internet exposure and does
+              not change the priority score.
             </p>
           </>
         )}
@@ -197,7 +218,7 @@ export default function Readout({
             {remediation.sources.length > 0 && (
               <div className="mt-2">
                 <div style={{ color: "var(--ink3)" }}>Sources</div>
-                <ul className="list-disc ml-4">{remediation.sources.map((s, i) => <li key={i}>{asText(s)}</li>)}</ul>
+                <ul className="list-disc ml-4">{remediation.sources.map((s, i) => <li key={i}>{sourceLink(s)}</li>)}</ul>
               </div>
             )}
             {remediation.limitations.length > 0 && (

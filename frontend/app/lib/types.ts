@@ -43,6 +43,7 @@ export type ApiValidation = {
   provenance: string; // "live" | "mock"
   observed_at: string | null;
   template_id: string | null;
+  kind?: "file_read" | "expression_evaluation";
   viewpoint: string | null;
   summary: string;
   evidence: ApiEvidence[];

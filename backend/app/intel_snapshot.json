@@ -1,12 +1,43 @@
-﻿{
-    "cve_id":  "CVE-2021-41773",
-    "epss_probability":  0.99992,
-    "epss_percentile":  0.99986,
-    "epss_date":  "2026-10-03",
-    "kev":  true,
-    "kev_date_added":  "2021-11-03",
-    "kev_retrieved_at":  "2026-10-03T23:51:40.3966192Z",
-    "provenance":  "verified_cached",
-    "epss_source":  "https://api.first.org/data/v1/epss?cve=CVE-2021-41773",
-    "kev_source":  "https://github.com/cisagov/kev-data"
+{
+  "schema_version": 2,
+  "retrieved_at": "2026-10-04T04:36:26.757843+00:00",
+  "kev_catalog_version": "2026.10.02",
+  "cves": {
+    "CVE-2017-5638": {
+      "cve_id": "CVE-2017-5638",
+      "epss_probability": 0.99999,
+      "epss_percentile": 0.99994,
+      "epss_date": "2026-10-03",
+      "kev": true,
+      "kev_date_added": "2021-11-03",
+      "kev_retrieved_at": "2026-10-04T04:36:26.757843+00:00",
+      "provenance": "verified_cached",
+      "epss_source": "https://api.first.org/data/v1/epss?cve=CVE-2017-5638",
+      "kev_source": "https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json"
+    },
+    "CVE-2021-41773": {
+      "cve_id": "CVE-2021-41773",
+      "epss_probability": 0.99992,
+      "epss_percentile": 0.99986,
+      "epss_date": "2026-10-03",
+      "kev": true,
+      "kev_date_added": "2021-11-03",
+      "kev_retrieved_at": "2026-10-04T04:36:26.757843+00:00",
+      "provenance": "verified_cached",
+      "epss_source": "https://api.first.org/data/v1/epss?cve=CVE-2021-41773",
+      "kev_source": "https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json"
+    },
+    "CVE-2021-42013": {
+      "cve_id": "CVE-2021-42013",
+      "epss_probability": 0.99964,
+      "epss_percentile": 0.99976,
+      "epss_date": "2026-10-03",
+      "kev": true,
+      "kev_date_added": "2021-11-03",
+      "kev_retrieved_at": "2026-10-04T04:36:26.757843+00:00",
+      "provenance": "verified_cached",
+      "epss_source": "https://api.first.org/data/v1/epss?cve=CVE-2021-42013",
+      "kev_source": "https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json"
+    }
+  }
 }
