@@ -151,9 +151,21 @@ export function kevText(f: Finding): string {
   return `${v} · synthetic`;
 }
 
+// EPSS as a percentage that never rounds up to certainty (or down to zero).
+// 0.99992 → "99.992%", 0.9999996 → ">99.999%", 1 → "100%", 0.0001 → "<0.1%"
+export function formatEpss(p: number): string {
+  if (p >= 1) return "100%";
+  if (p <= 0) return "0%";
+  const pct = p * 100;
+  if (pct < 0.1) return "<0.1%";
+  if (pct < 99.9) return `${pct.toFixed(1)}%`;
+  const precise = pct.toFixed(3);
+  return precise === "100.000" ? ">99.999%" : `${Number(precise)}%`;
+}
+
 export function epssText(f: Finding): string {
   if (f.threat.epss === null) return "Unknown";
-  const v = `${(f.threat.epss * 100).toFixed(1)}%`;
+  const v = formatEpss(f.threat.epss);
   if (f.threat.basis === "verified" && f.threat.epssDate) return `${v} · ${f.threat.epssDate}`;
   return `${v} · synthetic`;
 }
