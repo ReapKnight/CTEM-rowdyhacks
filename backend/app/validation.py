@@ -1,75 +1,123 @@
-﻿"""The only executable check is the reviewed template against the local lab."""
+"""Run one approved Nuclei check against its fixed Compose lab service."""
 
 import asyncio
+import ipaddress
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
-TEMPLATE_ID = "ctem-cve-2021-41773-readonly"
-MARKER = "CTEM-LAB-PROOF-41773"
-NETWORK = "ctem-rowdyhacks_lab"
-CONTAINER = "ctem-rowdyhacks-vulnerable-web-1"
-IMAGE = "projectdiscovery/nuclei:latest"  # Pin a digest after final demo verification.
+from .lab_checks import LAB_CHECKS
+
+IMAGE = "projectdiscovery/nuclei:v3.11.1"
 
 
-def interpret(output: str, returncode: int) -> dict:
-    """Do not interpret silence/scan failures as a clean target."""
-    records = []
-    for line in output.splitlines():
-        try:
-            item = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(item, dict) and item.get("template-id") == TEMPLATE_ID:
-            records.append(item)
-    match = next((record for record in records
-                  if record.get("matcher-status") is not False
-                  and MARKER in record.get("response", "")
-                  and "200 OK" in record.get("response", "")), None)
-    if match:
-        return {"status": "matched", "summary": "Approved check read the controlled marker file outside the web root.",
-                "evidence": [{"label": "HTTP response", "detail": "200 OK"},
-                             {"label": "Controlled marker", "detail": MARKER}]}
-    return {"status": "error", "summary": "No confirmed match. Review scanner output; this is not proof of mitigation.",
+def interpret(output: str, returncode: int, finding_id: str) -> dict:
+    """Require the selected template's response proof, never a generic scan match."""
+    check = LAB_CHECKS[finding_id]
+    if returncode == 0:
+        for line in output.splitlines():
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if (not isinstance(record, dict) or record.get("template-id") != check.template_id
+                    or record.get("matcher-status") is False):
+                continue
+            response = record.get("response", "")
+            if not isinstance(response, str):
+                continue
+            response = response.replace("\r\n", "\n")
+            headers, separator, body = response.partition("\n\n")
+            status = re.match(r"HTTP/\S+\s+(\d{3})(?:\s+([^\n]*))?", headers)
+            if not separator or not status:
+                continue
+            if check.kind == "file_read":
+                matched = status.group(1) == "200" and check.proof in body.splitlines()
+            else:
+                matched = bool(re.search(
+                    r"^X-CTEM-Lab-Proof:\s*" + re.escape(check.proof) + r"\s*$",
+                    headers, flags=re.IGNORECASE | re.MULTILINE,
+                ))
+            if matched:
+                status_line = "200 OK" if status.group(1) == "200" else (
+                    status.group(1) + " " + (status.group(2) or "")).strip()
+                return {"status": "matched", "summary": check.summary, "evidence": [
+                    {"label": "HTTP response", "detail": status_line},
+                    {"label": check.proof_label, "detail": check.proof},
+                ]}
+    return {"status": "error",
+            "summary": "No confirmed match. Review scanner output; this is not proof of mitigation.",
             "evidence": [{"label": "Scanner exit code", "detail": str(returncode)}]}
 
 
-async def run_validation(repo_root: Path) -> dict:
-    template_dir = repo_root / "lab" / "templates"
-    if not (template_dir / "CVE-2021-41773-readonly.yaml").is_file():
-        raise RuntimeError("Approved template missing from lab/templates")
-    inspect = await asyncio.create_subprocess_exec(
-        "docker", "inspect", "-f",
-        "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
-        CONTAINER,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE)
-    ip_bytes, _ = await asyncio.wait_for(inspect.communicate(), timeout=10)
-    ip = ip_bytes.decode(errors="replace").strip()
-    if inspect.returncode != 0 or not ip:
-        raise RuntimeError("Lab container unavailable. Run docker compose up -d.")
-    target = f"http://{ip}"
-    command = ["docker", "run", "--rm", "--network", NETWORK,
-               "-v", f"{template_dir.resolve()}:/templates:ro", IMAGE,
-               "-u", target, "-t", "/templates/CVE-2021-41773-readonly.yaml",
-               "-timeout", "5", "-retries", "0", "-duc", "-jsonl"]
-    proc = await asyncio.create_subprocess_exec(*command, stdout=asyncio.subprocess.PIPE,
-                                                stderr=asyncio.subprocess.PIPE)
+async def _command(*args: str, cwd: Path | None = None, timeout: int = 10) -> tuple[str, str, int]:
+    proc = await asyncio.create_subprocess_exec(
+        *args, cwd=cwd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
     try:
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
-    except asyncio.TimeoutError:
-        proc.kill()
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+    except BaseException:
+        if proc.returncode is None:
+            proc.kill()
         await proc.communicate()
+        raise
+    return stdout.decode(errors="replace"), stderr.decode(errors="replace"), proc.returncode
+
+
+async def run_validation(repo_root: Path, finding_id: str) -> dict:
+    check = LAB_CHECKS[finding_id]
+    template_dir = repo_root / "lab" / "templates"
+    if not (template_dir / check.template_file).is_file():
+        raise RuntimeError("Approved template missing from lab/templates")
+    try:
+        container, _, code = await _command(
+            "docker", "compose", "ps", "-q", check.service, cwd=repo_root,
+        )
+        container = container.strip()
+        if code != 0 or not container or len(container.splitlines()) != 1:
+            raise RuntimeError(f"Lab service {check.service} unavailable. Run docker compose up -d.")
+        details, _, code = await _command("docker", "inspect", container)
+        if code != 0:
+            raise RuntimeError("Could not inspect the selected lab container.")
+        try:
+            info = json.loads(details)[0]
+            labels = info["Config"]["Labels"]
+            network = labels["com.docker.compose.project"] + "_lab"
+            if labels["com.docker.compose.service"] != check.service or not info["State"]["Running"]:
+                raise ValueError("Unexpected service or stopped container")
+            ip = str(ipaddress.IPv4Address(info["NetworkSettings"]["Networks"][network]["IPAddress"]))
+        except (ValueError, KeyError, IndexError, TypeError) as exc:
+            raise RuntimeError("Selected lab service is not running on its Compose lab network.") from exc
+    except asyncio.TimeoutError as exc:
+        raise RuntimeError("Docker inspection timed out; result inconclusive.") from exc
+
+    # Stop the named scanner container even if the Docker CLI itself times out.
+    scanner = "ctem-validator-" + uuid4().hex
+    command = [
+        "docker", "run", "--rm", "--pull=never", "--name", scanner, "--network", network,
+        "-v", f"{template_dir.resolve()}:/templates:ro", IMAGE,
+        "-u", f"http://{ip}:{check.port}", "-t", "/templates/" + check.template_file,
+        "-timeout", "5", "-retries", "0", "-duc", "-ni", "-dr", "-jsonl", "-ot",
+    ]
+    try:
+        stdout, stderr, code = await _command(*command, timeout=30)
+        result = interpret(stdout, code, finding_id)
+        if result["status"] == "error":
+            result["evidence"].append({"label": "Diagnostic", "detail": stderr[-500:]})
+        return result
+    except asyncio.TimeoutError:
         return {"status": "error", "summary": "Validation timed out; result inconclusive.", "evidence": []}
-    result = interpret(stdout.decode(errors="replace"), proc.returncode)
-    if result["status"] == "error":
-        result["evidence"].append({"label": "Diagnostic", "detail": stderr.decode(errors="replace")[-500:]})
-    return result
+    finally:
+        try:
+            await _command("docker", "rm", "-f", scanner, timeout=5)
+        except (OSError, asyncio.TimeoutError):
+            pass
 
 
-def with_metadata(result: dict) -> dict:
+def with_metadata(result: dict, finding_id: str) -> dict:
+    check = LAB_CHECKS[finding_id]
     return {**result, "provenance": "live", "observed_at": datetime.now(timezone.utc).isoformat(),
-            "template_id": TEMPLATE_ID, "viewpoint": "local Docker lab",
-            "limitations": ["This check establishes controlled file read only; it does not prove RCE or internet exposure."]}
-
-
+            "template_id": check.template_id, "viewpoint": "local Docker lab", "kind": check.kind,
+            "limitations": [check.limitation]}

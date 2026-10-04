@@ -170,12 +170,25 @@ export function epssText(f: Finding): string {
   return `${v} · synthetic`;
 }
 
-// "File read confirmed" only with status "matched" AND marker evidence present
+// Only the expected approved template and its exact evidence can confirm a result.
 export function fileReadConfirmed(v: ApiValidation | null): boolean {
   return (
     !!v &&
     v.status === "matched" &&
-    v.evidence.some((e) => e.label === "Controlled marker" && e.detail.trim() !== "")
+    ((v.template_id === "ctem-cve-2021-41773-readonly" &&
+      v.evidence.some((e) => e.label === "Controlled marker" && e.detail === "CTEM-LAB-PROOF-41773")) ||
+      (v.template_id === "ctem-cve-2021-42013-readonly" &&
+        v.evidence.some((e) => e.label === "Controlled marker" && e.detail === "CTEM-LAB-PROOF-42013"))) &&
+    v.evidence.some((e) => e.label === "HTTP response" && e.detail === "200 OK")
+  );
+}
+
+export function expressionConfirmed(v: ApiValidation | null): boolean {
+  return (
+    !!v &&
+    v.status === "matched" &&
+    v.template_id === "ctem-cve-2017-5638-expression" &&
+    v.evidence.some((e) => e.label === "Computed response header" && e.detail === "5421")
   );
 }
 

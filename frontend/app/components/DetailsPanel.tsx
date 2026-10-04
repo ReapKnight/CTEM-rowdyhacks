@@ -2,7 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { ApiRemediation, ApiValidation } from "../lib/types";
 import { ApiError, requestRemediation, validateFinding } from "../lib/api";
-import { Basis, Finding, epssText, fileReadConfirmed, fmtScore, kevText, missingName } from "../findings";
+import { Basis, Finding, epssText, expressionConfirmed, fileReadConfirmed, fmtScore, kevText, missingName } from "../findings";
 
 // Small colored label showing where a value came from
 function BasisTag({ basis }: { basis: Basis }) {
@@ -40,6 +40,20 @@ function errorMessage(e: unknown): string {
 // Render whatever the backend puts in remediation sections/sources without assuming a shape
 const asText = (x: unknown): string =>
   typeof x === "string" ? x : x && typeof x === "object" && "label" in x ? String((x as { label: unknown }).label) : JSON.stringify(x);
+
+function sourceLink(x: unknown): ReactNode {
+  if (!x || typeof x !== "object" || !("url" in x)) return asText(x);
+  const source = x as { url?: unknown; label?: unknown };
+  if (typeof source.url !== "string") return asText(x);
+  try {
+    const url = new URL(source.url);
+    if (url.protocol !== "https:" || !["httpd.apache.org", "cwiki.apache.org", "struts.apache.org"].includes(url.hostname))
+      return asText(x);
+    return <a href={url.href} target="_blank" rel="noopener noreferrer" className="text-sky-300 underline">{asText(x)}</a>;
+  } catch {
+    return asText(x);
+  }
+}
 
 export default function DetailsPanel({
   finding,
@@ -93,16 +107,17 @@ export default function DetailsPanel({
   }
 
   const v = finding.validation;
-  const confirmed = fileReadConfirmed(v);
+  const fileRead = fileReadConfirmed(v);
+  const expression = expressionConfirmed(v);
   const hasRun = v.status !== "not_run";
 
   let resultTitle = "Not run yet";
   let resultTone = "border-slate-700 bg-slate-800/40 text-slate-200";
-  if (confirmed) {
-    resultTitle = "✓ File read confirmed";
+  if (fileRead || expression) {
+    resultTitle = fileRead ? "✓ File read confirmed" : "✓ Expression evaluation confirmed";
     resultTone = "border-emerald-700 bg-emerald-950/40 text-emerald-300";
   } else if (v.status === "matched") {
-    resultTitle = "Inconclusive: match reported without marker evidence";
+    resultTitle = "Inconclusive: match reported without the expected evidence";
     resultTone = "border-amber-700 bg-amber-950/30 text-amber-300";
   } else if (hasRun) {
     resultTitle = "Inconclusive";
@@ -308,8 +323,9 @@ export default function DetailsPanel({
               </div>
 
               <p className="text-xs text-slate-500 mt-3">
-                Validation runs one approved, read-only check against the controlled local Docker lab. It does not
-                prove internet exposure or remote code execution, and it does not change the priority score.
+                Validation runs one approved check against the controlled local Docker lab. The Struts check evaluates
+                fixed arithmetic without an operating-system command. These checks do not prove internet exposure or
+                change the priority score.
               </p>
             </>
           )}
@@ -352,7 +368,7 @@ export default function DetailsPanel({
                   <p className="text-slate-400">Sources</p>
                   <ul className="list-disc ml-5">
                     {remediation.sources.map((s, i) => (
-                      <li key={i}>{asText(s)}</li>
+                      <li key={i}>{sourceLink(s)}</li>
                     ))}
                   </ul>
                 </div>

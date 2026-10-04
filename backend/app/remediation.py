@@ -7,6 +7,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
+from .lab_checks import LAB_CHECKS, validation_confirmed
+
 SECTION_NAMES = (
     "remediation", "mitigation", "implementation",
     "verification", "rollback", "reasoning",
@@ -16,7 +18,11 @@ SOURCE = {
     "title": "Apache HTTP Server security advisory",
     "url": "https://httpd.apache.org/security/vulnerabilities_24.html",
 }
-MARKER = "CTEM-LAB-PROOF-41773"
+STRUTS_EOL_SOURCE = {
+    "label": "Apache Struts end-of-life versions",
+    "title": "End-of-Life Apache Struts Versions",
+    "url": "https://struts.apache.org/eol-versions.html",
+}
 
 
 def manual(finding_id, message, provenance="gemini_error"):
@@ -33,7 +39,7 @@ def manual(finding_id, message, provenance="gemini_error"):
 
 def generate_remediation(finding):
     finding_id = finding["id"]
-    if finding_id != "lab-httpd-41773":
+    if finding_id not in LAB_CHECKS:
         return manual(
             finding_id,
             "No reviewed remediation playbook exists for this finding.",
@@ -48,13 +54,13 @@ def generate_remediation(finding):
             "not_configured",
         )
 
-    validation = finding.get("validation", {})
-    evidence = validation.get("evidence", [])
-    confirmed = (
-        validation.get("status") == "matched"
-        and any(e.get("detail") == MARKER for e in evidence)
-        and any(e.get("detail") == "200 OK" for e in evidence)
-    )
+    confirmed = validation_confirmed(finding_id, finding.get("validation", {}))
+    source = SOURCE if finding_id != "lab-struts-5638" else {
+        "label": "Apache Struts S2-045 advisory",
+        "title": "S2-045: Jakarta Multipart parser vulnerability",
+        "url": "https://cwiki.apache.org/confluence/spaces/WW/pages/68717257/S2-045",
+    }
+    sources = [source, STRUTS_EOL_SOURCE] if finding_id == "lab-struts-5638" else [source]
 
     actions = {
         "remediation": {
@@ -143,7 +149,89 @@ def generate_remediation(finding):
         },
     }
 
-    if confirmed:
+    if finding_id == "lab-struts-5638":
+        actions = {
+            "remediation": {
+                "upgrade": (
+                    "[Apache S2-045] Migrate the affected Apache Struts application "
+                    "to a currently supported release with the S2-045 fix. Review "
+                    "application and dependency compatibility with its owner."
+                ),
+                "historical_fix": (
+                    "[Apache S2-045 and EOL guidance] Struts 2.3.32 and 2.5.10.1 "
+                    "were historical fix releases; both old branches are end-of-life."
+                ),
+            },
+            "mitigation": {
+                "filter": (
+                    "[Apache S2-045] If an upgrade cannot be deployed immediately, "
+                    "review a Servlet filter that rejects suspicious Content-Type "
+                    "values. Treat it as a temporary workaround, not a completed fix."
+                ),
+                "restrict": (
+                    "[Prototype workflow] Restrict access to the affected service "
+                    "to necessary users or networks while planning the fix."
+                ),
+            },
+            "implementation": {
+                "preserve_demo": (
+                    "[Prototype workflow] Keep the vulnerable lab container for "
+                    "the demonstration and deploy a separate test instance for changes."
+                ),
+                "stage_change": (
+                    "[Prototype workflow] Inventory the framework, application "
+                    "dependencies, and upload paths; test the migration in staging "
+                    "before an owner-approved deployment."
+                ),
+            },
+            "verification": {
+                "version": (
+                    "[Prototype workflow] Check the running application includes "
+                    "a supported Struts release with the S2-045 fix, rather than "
+                    "relying on an image tag alone."
+                ),
+                "recheck": (
+                    "[Prototype workflow] Repeat the approved expression check "
+                    "against a separate remediated test deployment. The current "
+                    "validator is fixed to the vulnerable lab container."
+                ),
+                "availability": (
+                    "[Prototype workflow] Confirm intended application and upload "
+                    "flows work. A failed scan or timeout alone is not proof of repair."
+                ),
+            },
+            "rollback": {
+                "safe_rollback": (
+                    "[Prototype workflow] Prepare a reviewed rollback plan and "
+                    "retain access restrictions if service recovery is needed."
+                ),
+            },
+            "reasoning": {
+                "context": (
+                    "[Prototype context] Environment, business criticality, data "
+                    "sensitivity, and internet-facing status are declared demo inputs."
+                ),
+                "scope": (
+                    "[Prototype evidence] The validator runs fixed arithmetic in "
+                    "the local lab; no OS command or change was executed, and "
+                    "validation does not change the CTEM priority score."
+                ),
+            },
+        }
+    elif finding_id == "lab-httpd-42013":
+        actions["reasoning"]["context"] = (
+            "[Prototype context] This Apache 2.4.50 container is assigned a "
+            "low-criticality, internal development asset for the demo. The "
+            "local lab does not establish an organization's exposure."
+        )
+
+    if confirmed and finding_id == "lab-struts-5638":
+        actions["reasoning"]["lab_result"] = (
+            "[Live validation] The approved check returned a header with "
+            "the computed result of fixed arithmetic. This confirms OGNL "
+            "expression evaluation in the local lab, not internet exposure."
+        )
+    elif confirmed:
         actions["reasoning"]["lab_result"] = (
             "[Live validation] The approved lab check returned HTTP 200 "
             "and the expected controlled marker. This confirms file read "
@@ -151,13 +239,14 @@ def generate_remediation(finding):
         )
     else:
         actions["reasoning"]["lab_result"] = (
-            "[Validation state] No successful marker-file validation is "
-            "recorded in this backend process. Do not claim confirmed "
-            "file read; run the approved validation first."
+            "[Validation state] No successful approved check is recorded "
+            "for this finding in this backend process. Run validation before "
+            "claiming a confirmed lab result."
         )
 
     required_actions = {
-        "remediation": ["upgrade", "incomplete_fix"],
+        "remediation": ["upgrade", "historical_fix"] if finding_id == "lab-struts-5638"
+                       else ["upgrade", "incomplete_fix"],
         "verification": ["version", "recheck", "availability"],
         "rollback": ["safe_rollback"],
         "reasoning": ["lab_result", "context", "scope"],
@@ -188,7 +277,7 @@ def generate_remediation(finding):
 
     context = {
         "finding": finding,
-        "reviewed_source": SOURCE,
+        "reviewed_sources": sources,
         "approved_actions": actions,
         "required_actions": required_actions,
     }
@@ -291,7 +380,7 @@ def generate_remediation(finding):
             section: [actions[section][action] for action in chosen[section]]
             for section in SECTION_NAMES
         },
-        "sources": [SOURCE],
+        "sources": sources,
         "limitations": [
             "Gemini selects and orders reviewed actions; action wording is curated.",
             "Recommendations require owner review. No changes were executed.",
@@ -299,4 +388,3 @@ def generate_remediation(finding):
         ],
         "model": model,
     }
-

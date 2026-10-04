@@ -37,7 +37,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    load(mock);
+    const timer = window.setTimeout(() => void load(mock), 0);
+    return () => window.clearTimeout(timer);
   }, [mock, load]);
 
   // When validation finishes in the panel, store the result on that finding
