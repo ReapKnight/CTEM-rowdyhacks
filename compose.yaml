@@ -1,4 +1,4 @@
-﻿services:
+services:
   vulnerable-web:
     build:
       context: ./lab/target
@@ -9,6 +9,18 @@
       lab:
         aliases:
           - vulnerable-web.ctem.local
+
+  httpd-250-internal:
+    build:
+      context: ./lab/target-250
+    image: rowdyhacks/ctem-httpd-250:lab
+    networks:
+      - lab
+
+  struts-internal:
+    image: vulhub/struts2:2.3.30
+    networks:
+      - lab
 
 networks:
   lab:
