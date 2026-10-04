@@ -147,7 +147,7 @@ export const fmtScore = (n: number) => (Number.isInteger(n) ? String(n) : n.toFi
 export function kevText(f: Finding): string {
   if (f.threat.kev === null) return "Unknown";
   const v = f.threat.kev ? "Listed" : "Not listed";
-  if (f.threat.basis === "verified" && f.threat.kevRetrievedAt) return `${v} · retrieved ${f.threat.kevRetrievedAt}`;
+  if (f.threat.basis === "verified" && f.threat.kevRetrievedAt) return `${v} · retrieved ${f.threat.kevRetrievedAt.slice(0, 10)}`;
   return `${v} · synthetic`;
 }
 

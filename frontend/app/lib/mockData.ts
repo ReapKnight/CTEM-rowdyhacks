@@ -29,22 +29,86 @@ export const mockFindings: ApiFindingsResponse = {
         "source": "CVE reference; verify before demo"
       },
       "threat": {
-        "epss_probability": null,
-        "epss_percentile": null,
-        "kev": null,
-        "epss_date": null,
-        "kev_retrieved_at": null,
-        "provenance": "synthetic_demo"
+        "epss_probability": 0.99992,
+        "epss_percentile": 0.99986,
+        "kev": true,
+        "epss_date": "2026-10-03",
+        "kev_retrieved_at": "2026-10-03T23:51:40.3966192Z",
+        "provenance": "verified_cached",
+        "epss_source": "https://api.first.org/data/v1/epss?cve=CVE-2021-41773",
+        "kev_source": "https://github.com/cisagov/kev-data",
+        "kev_date_added": "2021-11-03"
       },
       "validation_supported": true,
       "priority": {
-        "score": null,
+        "score": 95.0,
         "model_version": "ctem-demo-v0.1",
-        "categories": [],
-        "missing_inputs": [
-          "threat.epss_probability",
-          "threat.kev"
-        ]
+        "categories": [
+          {
+            "key": "threat",
+            "max_points": 30,
+            "points": 30.0,
+            "factors": [
+              {
+                "label": "EPSS probability",
+                "points": 20.0,
+                "explanation": "20 \u00d7 EPSS probability; EPSS is not asset compromise probability."
+              },
+              {
+                "label": "CISA KEV",
+                "points": 10.0,
+                "explanation": "10 points if listed in the retrieved KEV catalog."
+              }
+            ]
+          },
+          {
+            "key": "exposure",
+            "max_points": 25,
+            "points": 25.0,
+            "factors": [
+              {
+                "label": "Predefined internet exposure",
+                "points": 25.0,
+                "explanation": "Asset context supplied for the demo; the lab check does not establish internet exposure."
+              }
+            ]
+          },
+          {
+            "key": "business_impact",
+            "max_points": 25,
+            "points": 25.0,
+            "factors": [
+              {
+                "label": "Criticality",
+                "points": 15.0,
+                "explanation": "Predefined business criticality."
+              },
+              {
+                "label": "Production environment",
+                "points": 5.0,
+                "explanation": "Production adds 5 points."
+              },
+              {
+                "label": "Data sensitivity",
+                "points": 5.0,
+                "explanation": "Predefined data sensitivity."
+              }
+            ]
+          },
+          {
+            "key": "technical_severity",
+            "max_points": 20,
+            "points": 15.0,
+            "factors": [
+              {
+                "label": "CVSS base score",
+                "points": 15.0,
+                "explanation": "2 \u00d7 supplied CVSS base score."
+              }
+            ]
+          }
+        ],
+        "missing_inputs": []
       },
       "validation": {
         "status": "not_run",
@@ -278,7 +342,7 @@ export const mockFindings: ApiFindingsResponse = {
       }
     }
   ],
-  "generated_at": "2026-10-03T23:30:00+00:00"
+  "generated_at": "2026-10-04T00:00:00+00:00"
 };
 
 export function mockValidation(): ApiValidation {

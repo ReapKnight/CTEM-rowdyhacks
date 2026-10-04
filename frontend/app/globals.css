@@ -1,26 +1,249 @@
+@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap");
 @import "tailwindcss";
 
+/* ── Command-center theme ─────────────────────────────────────
+   Category colors were checked for colorblind separation and
+   contrast on the dark surface. Green/amber/red are reserved
+   for status (validated / needs review / error).            */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #070b10;
+  --panel: #0c141c;
+  --panel2: #0f1a24;
+  --line: #1b2b38;
+  --line2: #24394a;
+  --ink: #e6f1f8;
+  --ink2: #9bb3c4;
+  --ink3: #5f7a8d;
+  --cyan: #3fd0ff;
+  --threat: #e0602a;
+  --exposure: #1b98c6;
+  --business: #b38b1c;
+  --technical: #9a6af0;
+  --ok: #2ee59d;
+  --warn: #ffb020;
+  --crit: #ff4d5e;
+  --mono: "Share Tech Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  --hud: "Rajdhani", "Segoe UI", system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #000;
+  color: var(--ink);
+  font-family: var(--mono);
+}
+
+/* Hand cursor on everything you can click (Tailwind v4 resets buttons to the arrow) */
+button:not(:disabled),
+[role="button"],
+a[href],
+summary {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: progress; /* e.g. while a validation is running */
+}
+
+.hud {
+  font-family: var(--hud);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.frame {
+  background: radial-gradient(1200px 700px at 50% 30%, #0d1b26 0%, var(--bg) 70%);
+  position: relative;
+}
+.frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, #ffffff05 3px 4px);
+  pointer-events: none;
+}
+
+.panel {
+  background: linear-gradient(180deg, var(--panel2), var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  position: relative;
+}
+.panel::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 14px;
+  width: 60px;
+  height: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan);
+}
+
+.step {
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  cursor: pointer;
+}
+.step:hover,
+.step:focus-visible {
+  filter: brightness(1.35);
+  outline: none;
+}
+
+/* ── Animations ── */
+@keyframes blink { 50% { opacity: 0.25; } }
+@keyframes pulseWarn { 50% { box-shadow: 0 0 4px #ffb02044; } }
+@keyframes slideIn {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes toastGlow { 50% { box-shadow: 0 0 10px #ffb02033, 0 10px 30px #000a; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes stamp {
+  0% { opacity: 0; transform: scale(1.6); }
+  70% { opacity: 1; transform: scale(0.96); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes rowGlow {
+  0% { box-shadow: 0 0 0 #2ee59d00; }
+  30% { box-shadow: 0 0 22px #2ee59d66; }
+  100% { box-shadow: 0 0 0 #2ee59d00; }
+}
+
+@keyframes flash {
+  0%, 100% { box-shadow: 0 0 0 0 #3fd0ff00; }
+  20%, 60% { box-shadow: 0 0 0 2px #3fd0ffcc, 0 0 28px #3fd0ff88; }
+}
+/* Briefly outlines the section a stage button took you to */
+.flash { animation: flash 1.8s ease-out; }
+
+/* ── Moving glow: a soft band of light travels around the outline ── */
+@property --glow-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes glowSpin { to { --glow-angle: 360deg; } }
+@keyframes pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.025) translateY(-3px); }
+  70% { transform: scale(0.997); }
+  100% { transform: scale(1); }
+}
+.pop { animation: pop 0.55s cubic-bezier(0.3, 1.3, 0.5, 1); }
+
+/* Very faint, occasional "pop" to invite a click (Continue to Discover) */
+@keyframes nudge {
+  0%, 72%, 100% { transform: scale(1); }
+  82% { transform: scale(1.03); }
+  91% { transform: scale(0.995); }
+}
+.nudge { animation: nudge 3.2s ease-in-out 1s infinite; }
+
+/* shared ring drawing (masked so only the border shows) */
+.spotlight::before,
+.glow-soft::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: inherit;
+  background: conic-gradient(from var(--glow-angle), transparent 0 58%, #3fd0ff 74%, #d4f6ff 80%, #3fd0ff 86%, transparent 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: glowSpin 3s linear infinite;
+}
+
+/* selected finding: dimmer and slower, since it stays on */
+.glow-soft { position: relative; }
+.glow-soft::before {
+  inset: -1px;
+  padding: 2px;
+  opacity: 0.6;
+  animation-duration: 5s;
+}
+
+/* Spotlighting a single button (e.g. Validate exposure): tighter halo */
+.spotlight.spotlight-btn {
+  border-radius: 6px;
+  box-shadow: 0 0 0 4px #0b161f, 0 0 26px 6px #3fd0ff66 !important;
+}
+.spotlight.spotlight-btn::before {
+  inset: -6px;
+  padding: 2px;
+  border-radius: 10px;
+}
+
+/* First-run guide: the next stage to click gets a faint moving glow */
+.guide-next { position: relative; color: var(--cyan) !important; border-color: #2a6a86 !important; }
+.guide-next::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  pointer-events: none;
+  background: conic-gradient(from var(--glow-angle), transparent 0 55%, #3fd0ff 72%, #d4f6ff 80%, #3fd0ff 88%, transparent 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: glowSpin 2.6s linear infinite;
+  opacity: 0.85;
+}
+
+/* ── Spotlight (stage buttons) ── */
+.spot-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(2, 6, 10, 0.74);
+  pointer-events: none; /* you can still click anything */
+  opacity: 0;
+  transition: opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1); /* slow, soft fade out */
+}
+.spot-overlay.on { opacity: 1; transition-duration: 0.35s; } /* quicker fade in */
+.spotlight {
+  position: relative;
+  z-index: 35;
+  background-color: var(--panel2);
+  border-radius: 10px;
+  box-shadow: 0 0 0 8px var(--panel2), 0 0 0 10px #3fd0ff66, 0 0 48px 12px #3fd0ff55 !important;
+  transition: box-shadow 0.9s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.9s ease;
+}
+.spotlight::before { transition: opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* Leaving: everything fades together instead of switching off */
+.spotlight.spot-leaving {
+  background-color: transparent;
+  box-shadow: 0 0 0 8px #0f1a2400, 0 0 0 10px #3fd0ff00, 0 0 48px 12px #3fd0ff00 !important;
+}
+.spotlight.spotlight-btn.spot-leaving {
+  box-shadow: 0 0 0 4px #0b161f00, 0 0 26px 6px #3fd0ff00 !important;
+}
+.spotlight.spot-leaving::before { opacity: 0; }
+.spotlight::before {
+  inset: -11px; /* sits on the outer ring */
+  padding: 3px;
+  border-radius: 18px;
+  filter: drop-shadow(0 0 6px #3fd0ff);
+}
+
+.blink { animation: blink 1.4s infinite; }
+.pulse-warn { animation: pulseWarn 1.6s infinite; }
+.toast { animation: slideIn 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) both, toastGlow 2s 0.6s infinite; }
+.radar { animation: spin 1.6s linear infinite; }
+.rise { animation: rise 0.45s ease-out both; }
+.stamp { animation: stamp 0.5s ease-out both; }
+.row-moved-up { animation: rowGlow 1.4s ease-out; }
+
+/* Respect the OS "reduce motion" setting */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
