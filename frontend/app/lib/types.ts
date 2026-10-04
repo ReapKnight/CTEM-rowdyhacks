@@ -63,7 +63,11 @@ export type ApiFinding = {
     kev: boolean | null;
     epss_date: string | null;
     kev_retrieved_at: string | null;
-    provenance: string; // "synthetic_demo" until real enrichment exists
+    provenance: string; // "synthetic_demo", or "verified_cached" once real intel is loaded
+    // Present when real intel is loaded (backend/app/intel_snapshot.json)
+    epss_source?: string;
+    kev_source?: string;
+    kev_date_added?: string;
   };
   validation_supported: boolean;
   priority: ApiPriority;
