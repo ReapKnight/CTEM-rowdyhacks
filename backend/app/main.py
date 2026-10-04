@@ -48,9 +48,9 @@ async def validate(finding_id: str):
             "code": "VALIDATION_RUNNING", "message": "Validation already running", "retryable": True}})
     async with validation_lock:
         try:
-            result = with_metadata(await run_validation(REPO_ROOT))
+            result = with_metadata(await run_validation(REPO_ROOT, finding_id), finding_id)
         except (OSError, RuntimeError) as exc:
-            result = with_metadata({"status": "error", "summary": str(exc), "evidence": []})
+            result = with_metadata({"status": "error", "summary": str(exc), "evidence": []}, finding_id)
         validation_results[finding_id] = result
         return result
 
